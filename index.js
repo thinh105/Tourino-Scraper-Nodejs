@@ -4,7 +4,7 @@ const path = require('path');
 
 (async () => {
   await tourRd.initialize();
-  await runBatch(110, 150, 10);
+  await runBatch(130, 150, 20);
 })();
 
 const runBatch = async (start, stop, step) => {
@@ -17,32 +17,24 @@ const runBatch = async (start, stop, step) => {
   let totalQuantity = listUrl.length;
   console.log(`Total Tour to get: ${totalQuantity} !!!`);
 
-  for (let j = 0; j < 7; j += 1) {
+  for (let j = 0; j < 1; j += 1) {
     let startLoop = step * j + start;
     let stopLoop = startLoop + step;
 
     console.log(`Get tour from ${startLoop} to ${stopLoop}!!!`);
     let listUrlPart = listUrl.slice(startLoop, stopLoop);
 
-    let { result, errorList, listUrl: remainingList } = await getTours(
-      step,
-      listUrlPart
-    );
+    let { result, errorList } = await getTours(step, listUrlPart);
 
     await fs.writeFile(
       `Data from ${startLoop} to ${stopLoop} - ${result.length}.json`,
       JSON.stringify(result)
     );
-
-    await fs.writeFile(
-      `Error from ${startLoop} to ${stopLoop} - ${errorList.length}.json`,
-      JSON.stringify(errorList)
-    );
-
-    await fs.writeFile(
-      `Log from ${startLoop} to ${stopLoop}.json`,
-      JSON.stringify(remainingList)
-    );
+    if (errorList.length)
+      await fs.writeFile(
+        `Error from ${startLoop} to ${stopLoop} - ${errorList.length}.json`,
+        JSON.stringify(errorList)
+      );
 
     console.log(`finished from ${startLoop} to ${stopLoop}!!!`);
   }
@@ -96,10 +88,7 @@ const getTours = async (step, listUrl) => {
     }
   }
 
-  console.log(listUrl);
-  console.log(typeof listUrl);
-
-  return { result, errorList, listUrl };
+  return { result, errorList };
 };
 
 const getTour = async () => {
