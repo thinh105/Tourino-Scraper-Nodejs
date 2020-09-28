@@ -1,44 +1,9 @@
-const tourRd = require('./TourRd');
+/* eslint-disable no-console */
+
 const fs = require('fs').promises;
 const path = require('path');
 
-(async () => {
-  await tourRd.initialize();
-  await runBatch(130, 150, 20);
-})();
-
-const runBatch = async (start, stop, step) => {
-  let page = 0;
-
-  let listUrl = JSON.parse(
-    await fs.readFile(path.join(__dirname, 'Url', 'Tour-page-10.json'), 'utf8')
-  );
-
-  let totalQuantity = listUrl.length;
-  console.log(`Total Tour to get: ${totalQuantity} !!!`);
-
-  for (let j = 0; j < 1; j += 1) {
-    let startLoop = step * j + start;
-    let stopLoop = startLoop + step;
-
-    console.log(`Get tour from ${startLoop} to ${stopLoop}!!!`);
-    let listUrlPart = listUrl.slice(startLoop, stopLoop);
-
-    let { result, errorList } = await getTours(step, listUrlPart);
-
-    await fs.writeFile(
-      `Data from ${startLoop} to ${stopLoop} - ${result.length}.json`,
-      JSON.stringify(result)
-    );
-    if (errorList.length)
-      await fs.writeFile(
-        `Error from ${startLoop} to ${stopLoop} - ${errorList.length}.json`,
-        JSON.stringify(errorList)
-      );
-
-    console.log(`finished from ${startLoop} to ${stopLoop}!!!`);
-  }
-};
+const tourRd = require('./module/TourRd');
 
 const getTourId = async () => {
   let listUrl = [];
@@ -47,56 +12,136 @@ const getTourId = async () => {
   // Get Tour ID
   try {
     for (let i = 1; i <= 60; i++) {
-      let listUrlPage = await tourRd.getListTours(`vietnam?page=${i}`);
+      const listUrlPage = await tourRd.getListTours(`vietnam?page=${i}`);
       page = i;
       listUrl = [...listUrl, ...listUrlPage];
-      console.log('done page: ', i);
+      console.log('done page:', i);
     }
-  } catch (e) {
-    console.log(e);
+  } catch (error) {
+    console.log(error);
   } finally {
     await fs.writeFile(`Tour-Url-${page}.json`, JSON.stringify(listUrl));
     console.log('finished!!!');
   }
 };
 
+// for testing TourRd
+const getTour = async (tourId) => {
+  const tourData = await tourRd.getTourData(tourId);
+  // let quickGet = await tourRd.getDataTour('1842');
+
+  console.log(tourData);
+};
+
 const getTours = async (step, listUrl) => {
-  let result = [];
-  let errorList = [];
+  const data = [];
+  const reviews = [];
+  const errorList = [];
 
   // listUrl.length
   for (let i = 0; i < step; i++) {
     try {
-      let resultItem = await tourRd.getTourData(listUrl[i]);
+      const { tourData, tourReviews } = await tourRd.getTourData(listUrl[i]);
 
-      result.push(resultItem);
+      data.push(tourData);
+      reviews.push(tourReviews);
 
       console.log(
-        `Done tour ${i + 1} : id ${listUrl[i]}! Remaining: ${
+        `🌟🌟🌟: Complete tour ${i + 1} : id ${listUrl[i]}! Remaining: ${
           listUrl.length - i - 1
-        }`
+        } 🌟🌟🌟`
       );
 
-      listUrl[i] = 'ok';
-    } catch (e) {
-      let errorMessage = `Error on tour ${i + 1} : id ${listUrl[i]} !!!`;
+      // listUrl[i] = 'ok';
+    } catch (error) {
+      const errorMessage = `💥💥💥: Error on tour ${i + 1} : id ${
+        listUrl[i]
+      } !!!: 💥💥💥`;
 
-      listUrl[i] = 'error';
+      // listUrl[i] = 'error';
 
-      console.log(errorMessage, e);
-      errorList.push({ tour: listUrl[i], error: e });
+      console.log(errorMessage, error);
+      errorList.push({ tour: listUrl[i], error: JSON.stringify(error) });
     }
   }
 
-  return { result, errorList };
+  return { data, reviews, errorList };
 };
 
-const getTour = async () => {
-  let quickGet = await tourRd.getDataTour('59429');
-  // let quickGet = await tourRd.getDataTour('1842');
+const runBatch = async (from = 0, to = 0, step = 10) => {
+  const listUrl = JSON.parse(
+    await fs.readFile(
+      path.join(__dirname, 'File', 'Input', 'input.json'),
+      'utf8'
+    )
+  );
 
-  console.log(quickGet);
+  console.log(
+    `👉👉👉Total Tours need to get: ${listUrl.length - from} !!!👈👈👈\n`
+  );
+
+  if (!to) to = listUrl.length;
+  const timesRun = Math.ceil((to - from + 1) / step);
+
+  for (let j = 0; j < timesRun; j += 1) {
+    const startLoop = step * j + from;
+    const stopLoop = startLoop + step - 1;
+
+    console.log(`🥊🥊🥊Get tour from ${startLoop} to ${stopLoop}!!!🥊🥊🥊`);
+
+    const listUrlPart = listUrl.slice(startLoop, stopLoop + 1);
+
+    const { data, reviews, errorList } = await getTours(step, listUrlPart);
+
+    const writeData = fs.writeFile(
+      path.join(
+        __dirname,
+        'File',
+        'Data',
+        `Data from ${startLoop} to ${stopLoop} - ${data.length}.json`
+      ),
+      JSON.stringify(data)
+    );
+
+    const writeReviews = fs.writeFile(
+      path.join(
+        __dirname,
+        'File',
+        'Review',
+        `Reviews from ${startLoop} to ${stopLoop} - ${reviews.length}.json`
+      ),
+      JSON.stringify(reviews)
+    );
+
+    let writeError = '';
+
+    if (errorList.length)
+      writeError = await fs.writeFile(
+        path.join(
+          __dirname,
+          'File',
+          'Error',
+          `Error from ${startLoop} to ${stopLoop} - ${errorList.length}.json`
+        ),
+        JSON.stringify(errorList)
+      );
+
+    await Promise.all([writeData, writeReviews, writeError]);
+
+    console.log(
+      `\n👍👍👍 finished from ${startLoop} to ${stopLoop}!!!😆😆😆 Total Remaining: ${
+        listUrl.length - stopLoop - 1
+      } 😅😅😅\n`
+    );
+  }
 };
+
+(async () => {
+  await tourRd.initialize();
+  await runBatch(310);
+
+  // await getTour('113186'); //188722
+})();
 
 // const file = await fs.readFile('filename.txt', 'utf8');
 // await fs.writeFile('filename.txt', 'test');
