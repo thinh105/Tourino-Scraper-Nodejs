@@ -61,7 +61,7 @@ const getTours = async (step, listUrl) => {
       // listUrl[i] = 'error';
 
       console.log(errorMessage, error);
-      errorList.push({ tour: listUrl[i], error: JSON.stringify(error) });
+      errorList.push({ tour: listUrl[i], error: error.toString() });
     }
   }
 
@@ -138,9 +138,9 @@ const runBatch = async (from = 0, to = 0, step = 10) => {
 
 (async () => {
   await tourRd.initialize();
-  await runBatch(310);
+  await runBatch(0, 1, 1);
 
-  // await getTour('113186'); //188722
+  // await getTour('164411'); //188722
 })();
 
 // const file = await fs.readFile('filename.txt', 'utf8');
